@@ -47,7 +47,7 @@ class TwitterController extends ContentController {
 		if($member) {
 			$twitter = TwitterApp::get()->first()->getTwitter();
 			if(!$twitter) {
-				$form->sessionMessage("Unable to fetch Twitter Application", "bad");
+				$form->sessionMessage("Oops. Unable to fetch Twitter Application. Try again soon.", "bad");
 				return $this->renderWith(array("TwitterController", "Page", "Controller"));
 			}
 			
@@ -141,16 +141,28 @@ class TwitterController extends ContentController {
 						$member = Member::get()->filter("TwitterUserID", $user['id_str'])->first();
 						if($member) {
 							$member->logIn();
-							$form->sessionMessage("You have logged in using Twitter.", "good");
+							$form->sessionMessage("Success! Logged in with Twitter.", "good");
 							$this->extend("onAfterTwitterLogin", $member);
 						} else {
-							$form->sessionMessage("Unable to find your account.", "bad");
+
+							$member = new KeepCupMember();
+							$signup = $member->connectTwitterAccount($user['id_str'], $user['screen_name'], $twitter->access()->token, $twitter->access()->secret);
+
+							if($signup) {
+								$member->logIn();
+								$form->sessionMessage("Success! Signed up with Twitter.", "good");
+								$this->extend("onAfterTwitterConnect", $member);
+							} else {
+								$form->sessionMessage("Opps. Unable to create your account. Check Twitter permitions", "bad");
+							}
+			
 						}
 					} else {
-						$form->sessionMessage("Unable to fetch your Twitter account.", "bad");
+
+						$form->sessionMessage("Oops. Unable to retrieve Twitter account.  Check your Twitter permissions.", "bad");
 					}
 				} else {
-					$form->sessionMessage("Unable to obtain access to Twitter.", "bad");
+					$form->sessionMessage("Oops. Unable to access Twitter. Try again.", "bad");
 				}
 			}
 		}

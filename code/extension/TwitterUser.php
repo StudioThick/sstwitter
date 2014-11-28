@@ -148,6 +148,13 @@ class TwitterUser extends DataExtension {
 		$this->owner->TwitterScreenName = $screen_name;
 		$this->owner->TwitterAccessToken = $access_token;
 		$this->owner->TwitterAccessSecret = $access_secret;
+
+		$this->owner->Email = $screen_name;
+
+		$this->owner->FirstName = $screen_name;
+
+		$this->owner->Surname = $screen_name;
+
 		
 		return (bool) $this->owner->write();
 	}
