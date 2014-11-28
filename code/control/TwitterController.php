@@ -41,11 +41,60 @@ class TwitterController extends ContentController {
 	 * @param $request SS_HTTPRequest
 	 * @return SS_HTTPResponse
 	**/
+	// public function connect($request) {
+	// 	$form = $this->Form();
+	// 	$member = Member::currentUser();
+	// 	if($member) {
+	// 		$twitter = TwitterApp::get()->first()->getTwitter();
+	// 		if(!$twitter) {
+	// 			$form->sessionMessage("Unable to fetch Twitter Application", "bad");
+	// 			return $this->renderWith(array("TwitterController", "Page", "Controller"));
+	// 		}
+			
+	// 		$twitter->setOAuthCallback(Director::absoluteURL(Controller::join_links("twitter", "connect")));
+
+	// 		$request = Session::get("Twitter.Request");
+	// 		if($request) {
+	// 			$twitter->setRequest(unserialize($request));
+	// 			Session::clear("Twitter.Request");
+	// 		} else {
+	// 			$request = $twitter->getRequestToken();
+	// 			if($request) {
+	// 				Session::set("Twitter.Request", serialize($request));
+	// 				return $this->redirect($twitter->getLoginURL());
+	// 			}
+	// 		}
+			
+	// 		// Check to see if we have our access tokens stored in the db.
+	// 		if($member->accessToken != null && $member->accessSecret != null) {
+	// 		   	$twitter->setAccess(new OAuthToken($member->accessToken, $member->accessSecret));
+	// 		} else if ($access = $twitter->getAccessToken()) {
+	// 			$user = $twitter->getUser();
+	// 			if($user) {
+	// 				$member->connectTwitterAccount($user['id_str'], $user['screen_name'], $twitter->access()->token, $twitter->access()->secret);
+	// 				$form->sessionMessage("You have connected your Twitter account.", "good");
+	// 				$this->extend("onAfterTwitterConnect", $member);
+	// 			}
+	// 		}
+	// 	} else {
+	// 		$form->sessionMessage("You must be logged in to connect your Twitter account.", "bad");
+	// 	}
+	// 	return $this->renderWith(array("TwitterController", "Page", "Controller"));
+	// }
 	public function connect($request) {
 		$form = $this->Form();
 		$member = Member::currentUser();
-		if($member) {
-			$twitter = TwitterApp::get()->first()->getTwitter();
+		
+		if($this->request->getVar("error")) {
+			$form->sessionMessage("Unable to obtain access to Twitter.", "bad");
+			return $this->renderWith(array("TwitterController", "Page", "Controller"));
+		}
+
+
+		$twitterApp = TwitterApp::get()->first();
+		if($member || $twitterApp->EnableTwitterLogin) {
+			$twitter = $twitterApp->getTwitter();
+
 			if(!$twitter) {
 				$form->sessionMessage("Unable to fetch Twitter Application", "bad");
 				return $this->renderWith(array("TwitterController", "Page", "Controller"));
@@ -65,16 +114,46 @@ class TwitterController extends ContentController {
 				}
 			}
 			
-			// Check to see if we have our access tokens stored in the db.
-			if($member->accessToken != null && $member->accessSecret != null) {
-			   	$twitter->setAccess(new OAuthToken($member->accessToken, $member->accessSecret));
-			} else if ($access = $twitter->getAccessToken()) {
-				$user = $twitter->getUser();
-				if($user) {
-					$member->connectTwitterAccount($user['id_str'], $user['screen_name'], $twitter->access()->token, $twitter->access()->secret);
-					$form->sessionMessage("You have connected your Twitter account.", "good");
-					$this->extend("onAfterTwitterConnect", $member);
+			$access = $twitter->getAccessToken();
+
+			$user = $twitter->getUser();
+			if(!$user) {
+				//$params = $twitterApp->getLoginUrlParams();
+				$url = $twitter->getLoginUrl();
+				if($url) {
+					return $this->redirect($url, 302);
+				} else {
+					$form->sessionMessage("Unable to login to Twitter.", "bad");
 				}
+			} else {
+
+
+				
+
+				
+
+
+				// Check whether this is a new user (signup)
+				$member = Member::get()->filter("TwitterUserID", $user['id_str'])->first();
+				if($member) {
+					return $this->redirect(Controller::join_links("twitter", "login"));
+				} else {
+					$member = new KeepCupMember();
+			
+
+	 				$signup = $member->connectTwitterAccount($user['id_str'], $user['screen_name'], $twitter->access()->token, $twitter->access()->secret);
+
+					if($signup) {
+						$member->logIn();
+						$form->sessionMessage("You have signed up with  your Twitter account.", "good");
+						$this->extend("onAfterTwitterConnect", $member);
+					} else {
+						$form->sessionMessage("Unable to create your account.", "bad");
+					}
+
+					
+				}
+				
 			}
 		} else {
 			$form->sessionMessage("You must be logged in to connect your Twitter account.", "bad");
@@ -144,9 +223,21 @@ class TwitterController extends ContentController {
 							$form->sessionMessage("You have logged in using Twitter.", "good");
 							$this->extend("onAfterTwitterLogin", $member);
 						} else {
-							$form->sessionMessage("Unable to find your account.", "bad");
+
+							$member = new KeepCupMember();
+							$signup = $member->connectTwitterAccount($user['id_str'], $user['screen_name'], $twitter->access()->token, $twitter->access()->secret);
+
+							if($signup) {
+								$member->logIn();
+								$form->sessionMessage("You have signed up with  your Twitter account.", "good");
+								$this->extend("onAfterTwitterConnect", $member);
+							} else {
+								$form->sessionMessage("Unable to create your account.", "bad");
+							}
+			
 						}
 					} else {
+
 						$form->sessionMessage("Unable to fetch your Twitter account.", "bad");
 					}
 				} else {
