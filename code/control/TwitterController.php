@@ -79,7 +79,8 @@ class TwitterController extends ContentController {
 		} else {
 			$form->sessionMessage("You must be logged in to connect your Twitter account.", "bad");
 		}
-		return $this->renderWith(array("TwitterController", "Page", "Controller"));
+		return $this->redirect("/");
+		//return $this->renderWith(array("TwitterController", "Page", "Controller"));
 	}
 
 	/**
@@ -169,8 +170,8 @@ class TwitterController extends ContentController {
 
 		// Extend Failed twitter login
 		if(!Member::currentUser()) $this->extend("onAfterFailedTwitterLogin");
-
-		return $this->renderWith(array("TwitterController", "Page", "Controller"));
+		return $this->redirect("/");
+		//return $this->renderWith(array("TwitterController", "Page", "Controller"));
 	}
 }
 
